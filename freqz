@@ -1,0 +1,36 @@
+#!/usr/bin/julia
+
+# The following is a juliet snippet to evaluate the 
+# coefficients for a halfband filter.  A halfband filter
+# is a filter where the cutoff frequency is Fs/4 and every
+# even coeffecient is zero except the center tap.
+# Note: every other (even except 0) is 0, most of the coefficients
+#       will be close to zero, force to zero actual
+
+using Plots;
+using DSP;
+
+# name is first argument
+name = ARGS[1]
+
+# remainder are coefficients for a polynomial filter
+h = DSP.Filters.PolynomialRatio(map(arg -> parse(Float64, arg)::Float64, ARGS[2:end]), [1.0])
+
+# compute and plot the frequency response
+x = range(-0.5, stop=0.5, length=1000)
+y = 20 .*log10.(abs.(freqz(h,x,1.0)))
+x2 = range(-0.25, stop=0.00, length=250)
+x3 = range( 0.00, stop=0.25, length=250)
+y2 = 20 .*log10.(abs.(freqz(h,x2 .+ 0.5,1.0)))
+y3 = 20 .*log10.(abs.(freqz(h,x3 .- 0.5,1.0)))
+p = plot(x, y,
+     title="$name frequency response",
+     legend=false,
+     xlabel="Normalized frequency, fs==1",
+     ylabel="Attenuation, dB")
+plot!(p, [x2;x3], [y2;y3])
+vline!(p, [-0.25, -0.125, 0.125, 0.25])
+
+# gui(p)
+
+savefig("response/$name.png")

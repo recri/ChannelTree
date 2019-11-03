@@ -1,0 +1,101 @@
+* Implement frequency shifting stacked halfband decimator tree
+** Algorithm comes from "An efficient channelizer tree for portable software
+   defined radios" by Fred Harris & Elettra Venosa & Xiaofei Chen & Chris Dick
+*** Take a halfband filter
+**** A filter which splits a band in half
+**** Filters of the form:
+| -5 | -4 | -3 | -2 | -1 | 0 | +1 | +2 | +3 | +4 | +5 |
+|    |    |    |    | b  | a | b  |    |    |    |    |
+|    |    | c  |  0 | b  | a | b  |  0 | c  |    |    |
+|  d |  0 | c  |  0 | b  | a | b  |  0 | c  |  0 |  d |
+abs(a) >= abs(b) >= abs(c) >= abs(d), and so on
+The impulse is symmetric.
+The only non-zero even indexed impulse is the one at 0.
+The |b|a|b| filter is 1/4 1/2 1/4     
+*** Distribute the halfband filter impulse over M-paths
+**** So the filter coefficients get partitioned over M-paths
+**** And the incoming signal gets commutated to M-paths
+**** With a halfband filter, you get a particular pattern of paths
+***** The 0-path has only the center impulse of the filter, all else is zero
+      This is how the partition is aligned, the 0th center indexed impulse
+      is assigned to the 0-path
+***** The 1-path and the 3-path have all the other non-zero impulses
+***** The 2-path has all zeroes
+*** Recombine the paths to get four bands
+    Table 4 Phase rotators combining output of four paths
+|        |  0 | fs/4 | 2fs/4 | 3fs/4 |
+| Path 0 | +1 | +1   | +1    | +1    |
+| Path 1 | +1 | +j   | −1    | −j    |
+| Path 2 |  – | –    | –     | –     |
+| Path 3 | +1 | −j   | −1    | +j    |
+*** Recombining paths 0, 1, and 3 to get the 0 band
+    should be simply be a rearranged application of the prototype filter
+    the commutation should arrange to apply b to s[-1], a to s[0], and b to s[+1]
+    and the recombination simply adds those together, and we advance T by 2 to get
+    the downsampling.
+*** So,
+    # let s be the signal samples indexed by T
+    # step T through the samples by 2
+    # compute the path sums for p0, p1, and p3 (p2 is always 0)
+    # compute the output samples for f = 0, fs/4, 2fs/4, and 3fs/4
+    # as o0, o1, o2, o3
+    # there is confusion about whether T is an index which
+    for T in 1:length(s):2;
+	let p0 = 0.5 * s[T]
+	let p1 = 0.25 * s[T+1] # p1 or p3
+	# let p2 = 0
+	let p3 = 0.25 * s[T-1] # p3 or p1
+	let o0 = p0 +     p1 +     p3
+	let o1 = p0 + j * p1 - j * p3
+	let o2 = p0 -     p1 -     p3
+	let o3 = p0 - j * p1 + j * p3
+*** Fig. 13 Four-path, 2-to-1 downconverter channelizer
+    shows first sample goes to path 1 and path 3
+    second sample goes to path 0 and path 2
+    but path 2 and path 3 have a one sample delay
+    so on a cycle,
+    s[T-1] goes to path 1,
+    s[T] goes to path 0,
+    s[T-1] goes to path 3 but result gets delayed by 1 sample,
+    s[T] goes to path 2 becomes 0 and gets delayed by 1 sample,
+    so path 3 is a one sample delayed copy of path 1 in the case where
+    our filter is 1/4 1/2 1/4.
+* Simple proof of concept
+** Using the simple 1/4 1/2 1/4 low pass filter
+   convolve each of the four path combinations with the low pass
+*** 0 then +1/4 +1/2 +1/4 yields 0fs/4 quadrant
+*** 1 then +j/4 +1/2 -j/4 yields 1fs/4 quadrant, or maybe 3fs/4
+*** 2 then -1/4 +1/2 -1/4 yields 2fs/4 quadrant
+*** 3 then -j/4 +1/2 +j/4 yields 3fs/4 quadrant, or maybe 1fs/4
+** Skip the decimation for the moment, just use these filter coefficients
+** Build an input signal with signals in each quadrant that can be identified
+** Run the input signal through each of the four filters
+** Visualize the result with an fft and plot
+** Should see the selected quadrant in the display
+** Concatenate two stages of filtering and you should
+* Decimation by 2 simply means computing half as many output samples
+   by using every other frame of the input samples, or by computing
+   all of the output samples and discarding half of them.
+** This is as simple as computing the vanilla 1/4 1/2 1/4 decimation
+   and swapping/negating the result 
+* Several days later 
+** the 1/4 1/2 /1/4 decimation may not work
+   it has 30dB worst case attenuation of aliased signals into the passband
+   the typical CIC or designed halfband filter has 100dB attenuation
+** the frequency selection aliases
+*** band 0 and 2 to centered at 0 in the new sample rate
+*** band 1 and 3 to centered at pi/2 in the new sample rate
+** if you can build a half band decimator that runs at ADC sample rate
+   and you can tolerate using the same halfband filter design at all rates
+   then you will only need two of them running at that rate
+*** the second decimator will have enough bandwidth to process 2 /2 sample streams
+    use one /2 slot to process the /2 samples from the first decimator into /4 samples
+    yielding /2 a /2 a /2 a ...
+*** the second /2 slot will have enough bandwidth to process 2 /4 sample streams
+    use one /4 slot to process the /4 samples from the first /2 slot into /8 samples
+    yielding /2 /4 /2 b /2 /4 /2 b ...
+*** the second /4 slot will have enough bandwidth to process 2 /8 sample streams
+    use one /8 slot to process the /8 samples from the first /4 slot into /16 samples
+    yielding /2 /4 /2 /8 /2 /4 /2 c /2 /4 /2 /8 /2 /4 /2 c ...
+*** and so on down the decimation chain
+    

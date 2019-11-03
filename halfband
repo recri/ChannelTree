@@ -1,0 +1,31 @@
+#!/usr/bin/julia
+
+# a julia snippet to design a halfband filter with
+# specified order and passband limits
+
+using FFTW
+using DSP
+
+function halfband(Ntaps, t0, t1)
+    # ~~[Filter Design with Parks-McClellan Remez]~~
+    # N = number of taps
+    # t0 = transition from passband begins, as fraction where fs == 0.5
+    # t1 = transition to stopband begins, as fraction where fs == 0.5
+    # Filter symmetric around 0.25 (where .5 is pi or Fs/2)
+    h = remez(Ntaps, [(0., t0) => 1, (t1, .5) => 0])
+    h[abs.(h) .<= 1e-4] .= 0.0
+    h
+end
+
+# set default parameters
+(defN, deft0, deft1) = (23, 0.125, 0.375)
+# merge arguments with defaults
+if     length(ARGS) == 0; println(halfband(defN, deft0, 0.375))
+elseif length(ARGS) == 1; println(halfband(parse(Int64, ARGS[1]), deft0, deft1))
+elseif length(ARGS) == 2; println(halfband(parse(Int64, ARGS[1]), parse(Float64, ARGS[2]), deft1))
+elseif length(ARGS) == 3; println(halfband(parse(Int64, ARGS[1]), parse(Float64, ARGS[2]), parse(Float64, ARGS[3])))
+else
+    println("usasge: halfband [n-taps=$defN [transition-begin=$deft0 [transition-end=$deft1]]]")
+    exit(1)
+end
+            

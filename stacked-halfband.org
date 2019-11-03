@@ -1,0 +1,78 @@
+* stacked halfband receiver
+** sample RF at 73.728 Msps
+** stacked half band filters
+*** downsample /2
+*** select 1/4 of frequency range
+| sample rate | down sample | final sample rate |
+|    73728000 |           1 |                   |
+|    36864000 |         0.5 |                   |
+|    18432000 |        0.25 |                   |
+|     9216000 |       0.125 |                   |
+|     4608000 |      0.0625 |                   |
+|     2304000 |     0.03125 |                   |
+|     1152000 |    0.015625 |            384000 |
+|      576000 |   7.8125e-3 |            192000 |
+|      288000 |  3.90625e-3 |             96000 |
+|      144000 | 1.953125e-3 |             48000 |
+|       72000 | 9.765625e-4 |                   |
+#+TBLFM: $1=@-1/2::$2=@-1/2::$3=$-2/3
+*** 23 tap half band filter, distributed over 4 paths
+    We give it an extra zero at the beginning to make
+    the partition of the coefficients come out.
+|-----+---------+---+---+---+---|
+|   T |  coeff. | 0 | 1 | 2 | 3 |
+|-----+---------+---+---+---+---|
+| -12 |       0 | x |   |   |   |
+| -11 | -0.0004 |   | x |   |   |
+| -10 |       0 |   |   | x |   |
+|  -9 |  0.0028 |   |   |   | x |
+|  -8 |       0 | x |   |   |   |
+|  -7 | -0.0107 |   | x |   |   |
+|  -6 |       0 |   |   | x |   |
+|  -5 |  0.0314 |   |   |   | x |
+|  -4 |       0 | x |   |   |   |
+|  -3 | -0.0828 |   | x |   |   |
+|  -2 |       0 |   |   | x |   |
+|  -1 |  0.3097 |   |   |   | x |
+|   0 |     0.5 | x |   |   |   |
+|   1 |  0.3097 |   | x |   |   |
+|   2 |       0 |   |   | x |   |
+|   3 | -0.0828 |   |   |   | x |
+|   4 |       0 | x |   |   |   |
+|   5 |  0.0314 |   | x |   |   |
+|   6 |       0 |   |   | x |   |
+|   7 | -0.0107 |   |   |   | x |
+|   8 |       0 | x |   |   |   |
+|   9 |  0.0028 |   | x |   |   |
+|  10 |       0 |   |   | x |   |
+|  11 | -0.0004 |   |   |   | x |
+|-----+---------+---+---+---+---|
+  Instead of a 23-tap filter with 13 non-zero coefficients
+  We have 4 6-tap filters to evaluate
+**** Path 0 filter has one non-zero coefficient, 0.5
+**** Path 1 filter has 6 non-zero coefficients
+**** Path 2 filter has no non-zero coefficients
+**** Path 3 filter has 6 non-zero coefficients
+*** An alternate filter used in the other stacked halfband filter example
+    Chosen because it implements with 2 adds and shifts,
+    and has a cutoff at fs/4, but the stopband is not so sharp.
+|----+--------+---+---+---+---|
+|  T | coeff. | 0 | 1 | 2 | 3 |
+|----+--------+---+---+---+---|
+| -4 |      0 | x |   |   |   |
+| -3 |      0 |   | x |   |   |
+| -2 |      0 |   |   | x |   |
+| -1 |   0.25 |   |   |   | x |
+|  0 |    0.5 | x |   |   |   |
+|  1 |   0.25 |   | x |   |   |
+|  2 |      0 |   |   | x |   |
+|  3 |      0 |   |   |   | x |
+|----+--------+---+---+---+---|
+**** So, [0, 0.5], [0, 0.25], [0, 0], [0.25, 0]
+     are the impulses applied to the commutated incoming sample
+     stream which can be evaluated with >>1 or >>2
+**** [0.25, 0.5, 0.25] are the direct FIR impulses,
+     when we combine the paths with 1,1,1,1 to get the F0 band,
+     this is the result we should get
+*** The four paths get recombined into four different streams
+    

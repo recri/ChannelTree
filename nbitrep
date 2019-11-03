@@ -1,0 +1,84 @@
+#!/usr/bin/julia
+
+# find all the powers of two in a floating point number
+function findbits(x)
+    a = Array{Int64}(undef, 0)
+    while length(a) < 64 && x != 0
+        b = convert(Int64, floor(log2(x)))
+        x = x - 2.0^b
+        push!(a, b)
+    end
+    a
+end
+
+# return the n or fewer bit representation of x with least absolute error
+function nbitrep(x, n)
+    if x < 0
+        -nbitrep(-x, n)
+    else
+        pow2(e) = 2.0^e
+        sumpows2(b) = sum(map(pow2, b))
+        b = findbits(x)
+        if length(b) <= n
+            sumpows2(b)
+        else
+            x0 = sumpows2(b[1:n])
+            x1 = x0 + pow2(b[n])
+            if abs(x0-x) < abs(x1-x)
+                x0
+            else
+                x1
+            end
+        end
+    end
+end
+
+using ArgParse
+
+s = ArgParseSettings()
+@add_arg_table s begin
+    "-n"
+        help = "the number of bits to use"
+        arg_type = Int
+        default = 1
+    "-b"
+        help = "report bits"
+        action = :store_true
+    "argv"
+        help = "numbers to be converted"
+        nargs='R'
+        required = true
+end
+
+args = parse_args(s)
+# println("Parsed args:")
+# for (arg,val) in args
+#    println("  $arg  =>  $val")
+# end
+    
+for c in args["argv"]
+    x = parse(Float64, c)
+    # println("arg $c, x $x")
+    (sign, x) = if x < 0
+        (-1, -x)
+    else
+        (+1, x)
+    end
+    # println("arg $c, sign $sign, x $x")
+    if x == 0
+        if args["b"]
+            print("(0) ")
+        else
+            print("0 ")
+        end
+    else
+        bits = nbitrep(x, args["n"])
+        # println("arg $c, sign $sign, x $x, bits $x")
+        if args["b"]
+            print("($sign $(findbits(bits)) ")
+        else
+            print("$(sign*bits) ")
+        end
+    end
+end
+print("\n")

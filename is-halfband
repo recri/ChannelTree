@@ -1,0 +1,31 @@
+#!/usr/bin/julia
+
+# The following juliet snippet evaluates the 
+# coefficients for a halfband filter.  A halfband filter
+# is a filter where the cutoff frequency is Fs/4 and every
+# even coefficient is zero except the center tap.
+# verify:
+#  * odd number of coefficient
+#  * center coefficient is zero
+#  * all off-center coefficients are symmetric
+#  * all even offset from center off-center coefficients are zero
+#  * all odd offset from center off-center coefficients strictly
+#    decrease in absolute value going away from the center
+
+function fatal(message) println(message); exit(1) end
+
+h = map(arg -> parse(Float64, arg)::Float64, ARGS)
+N = length(h)
+midN = convert(Int,floor(N/2+1))
+
+N & 1 == 1 ||
+    fatal("length, $N, is not odd")
+
+h[midN] == 0.5 ||
+    fatal("middle element, $(h[midN]) at $midN, not equal to 0.5")
+
+for i in 1:midN-1
+    h[i] == h[N+1-i] ||
+        fatal("asymmetry between h[$i] and h[$(N+1-i)]")
+end
+

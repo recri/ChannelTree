@@ -1,0 +1,5 @@
+#!/usr/bin/julia
+println(PROGRAM_FILE * " " * abspath(PROGRAM_FILE))
+if (islink(PROGRAM_FILE))
+   println(readlink(PROGRAM_FILE) * " " * abspath(readlink(PROGRAM_FILE)))
+end

@@ -1,0 +1,22 @@
+* Julia Scripting
+** According to [[https://en.wikipedia.org/wiki/Julia_(programming_language)][Wikipedia]]:
+   Julia is a high-level, high-performance, dynamic programming language.
+   While it is a general purpose language and can be used to write any application,
+   many of its features are well-suited for high-performance numerical analysis
+   and computational science.
+** But julia is also a perfectly good, even excellent, scripting language.
+*** Here is an implementation of the UNIX echo command as a julia script
+#+BEGIN_SRC julia
+#!/usr/bin/julia
+if length(ARGS) == 0
+  print("\n")
+elseif ARGS[1] == "-n"
+  print(join(ARGS[2:end], " ")
+else
+  print(join(ARGS, " "), "\n")
+end
+#+END_SRC
+
+*** Make your script executable with
+chmod +x scriptname
+*** Now you can run the script from bash

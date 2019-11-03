@@ -1,0 +1,6 @@
+authors = ["Roger E Critchlow Jr <rec@elf.org>"]
+name = "ChanTree"
+uuid = "660070f8-f9be-11e9-3b40-57ef9ab7ba77"
+version = "0.1.0"
+
+[deps]

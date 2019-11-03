@@ -1,0 +1,7 @@
+#!/usr/bin/julia
+
+using Pkg
+
+for arg in ARGS
+    Pkg.add(arg)
+end

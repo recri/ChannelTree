@@ -1,0 +1,10 @@
+#!/usr/bin/julia
+if length(ARGS) == 0
+    print("\n")
+elseif ARGS[1] == "-n"
+    print(join(ARGS[2:end], " "))
+else 
+    print(join(ARGS, " ") * "\n")
+end 
+
+
